@@ -36,7 +36,24 @@ func main() {
 		logger.Fatalf("FATAL: Could not connect to database: %v", err)
 	}
 	defer db.Close()
+	// ---- KONFIGURASI POOL----
 
+	// SetConnMaxLifetime: Durasi maksimum koneksi boleh dibuka.
+	// Mengaturnya lebih rendah dari timeout firewall (misal 5 menit) akan
+	// secara otomatis mendaur ulang koneksi sebelum diputus oleh firewall.
+	db.SetConnMaxLifetime(10 * time.Minute)
+
+	// SetMaxIdleConns: Jumlah maksimum koneksi yang boleh idle di pool.
+	db.SetMaxIdleConns(10)
+
+	// SetMaxOpenConns: Jumlah maksimum koneksi yang boleh dibuka ke database.
+	db.SetMaxOpenConns(100)
+
+	// SetConnMaxIdleTime: Durasi maksimum koneksi boleh idle sebelum ditutup.
+	// Ini membantu membuang koneksi yang tidak terpakai.
+	db.SetConnMaxIdleTime(10 * time.Minute)
+
+	// ---------------------------------------------
 	// HTTP Client - dikonfigurasi sekali dan di-inject
 	httpClient := &http.Client{
 		Timeout: 80 * time.Second,
@@ -61,7 +78,7 @@ func main() {
 	postSync := synchronizer.NewOutputDetailSynchronizer(dataFetcher, dataStorer, logger)
 
 	// 5. Run The Application
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
 	if err := postSync.Synchronize(ctx); err != nil {
