@@ -1,0 +1,72 @@
+package main
+
+import (
+	"context"
+	"log"
+	"net/http"
+	"os"
+	"time"
+
+	"github.com/aryadiwwt/synctodb/config"
+	"github.com/aryadiwwt/synctodb/fetcher"
+	"github.com/aryadiwwt/synctodb/storer"
+	"github.com/aryadiwwt/synctodb/synchronizer"
+	"github.com/joho/godotenv"
+
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
+)
+
+func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: Could not load .env file")
+	}
+	logger := log.New(os.Stdout, "DATA-SYNC-SERVICE: ", log.LstdFlags|log.Lshortfile)
+
+	// 1. Load Configuration
+	cfg := config.New()
+	// Pastikan username dan password tidak kosong
+	if cfg.APIUsername == "" || cfg.APIPassword == "" {
+		logger.Fatal("FATAL: API_USERNAME and API_PASSWORD environment variables must be set.")
+	}
+	// 2. Setup Dependencies
+	// Koneksi DB
+	db, err := sqlx.Connect("postgres", cfg.DatabaseURL)
+	if err != nil {
+		logger.Fatalf("FATAL: Could not connect to database: %v", err)
+	}
+	defer db.Close()
+
+	// HTTP Client - dikonfigurasi sekali dan di-inject
+	httpClient := &http.Client{
+		Timeout: 80 * time.Second,
+	}
+
+	// 3. Create Concrete Implementations
+	// Berikan semua konfigurasi yang dibutuhkan oleh Fetcher
+	dataFetcher := fetcher.NewHTTPFetcher(
+		httpClient,
+		cfg.APIURL,
+		cfg.APILoginURL,
+		cfg.APIUsername,
+		cfg.APIPassword,
+		cfg.APIDataTahun,
+		cfg.APIDataKdProv,
+		cfg.APIDataKdKab,
+	)
+	dataStorer := storer.NewDBStorer(db)
+
+	// 4. Compose The Application
+	// Inject semua dependensi ke dalam synchronizer
+	postSync := synchronizer.NewOutputDetailSynchronizer(dataFetcher, dataStorer, logger)
+
+	// 5. Run The Application
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	if err := postSync.Synchronize(ctx); err != nil {
+		logger.Fatalf("FATAL: Post synchronization process failed: %v", err)
+	}
+
+	logger.Println("Application finished successfully.")
+}
