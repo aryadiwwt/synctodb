@@ -68,7 +68,7 @@ func (s *OutputDetailSynchronizer) Synchronize(ctx context.Context) error {
 		s.log.Printf("=== Selesai memproses untuk Provinsi: %s, Kabupaten: %s. Total %d data disimpan. ===", wilayah.KodeProvinsi, wilayah.KodeKabupaten, len(details))
 
 		// Opsional: Beri jeda singkat antar request untuk tidak membebani API
-		time.Sleep(1 * time.Second)
+		time.Sleep(3 * time.Second)
 	}
 
 	s.log.Println("Semua proses sinkronisasi untuk seluruh wilayah telah selesai.")
