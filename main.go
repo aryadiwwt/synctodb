@@ -56,7 +56,7 @@ func main() {
 	// ---------------------------------------------
 	// HTTP Client - dikonfigurasi sekali dan di-inject
 	httpClient := &http.Client{
-		Timeout: 80 * time.Second,
+		Timeout: 180 * time.Second,
 	}
 
 	// 3. Create Concrete Implementations
@@ -68,8 +68,6 @@ func main() {
 		cfg.APIUsername,
 		cfg.APIPassword,
 		cfg.APIDataTahun,
-		cfg.APIDataKdProv,
-		cfg.APIDataKdKab,
 	)
 	dataStorer := storer.NewDBStorer(db)
 

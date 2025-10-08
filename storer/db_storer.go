@@ -2,6 +2,7 @@ package storer
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/aryadiwwt/synctodb/domain"
 	customErrors "github.com/aryadiwwt/synctodb/errors"
@@ -9,9 +10,26 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+type Wilayah struct {
+	KodeProvinsi  string `db:"provinsi_id"`
+	KodeKabupaten string `db:"kota_id"`
+}
+
 // Storer mendefinisikan kontrak untuk menyimpan data post.
 type Storer interface {
 	StoreOutputDetails(ctx context.Context, details []domain.OutputDetail) error
+	GetAllWilayah(ctx context.Context) ([]Wilayah, error)
+}
+
+// Fungsi untuk mengambil semua wilayah dari DB
+func (s *dbStorer) GetAllWilayah(ctx context.Context) ([]Wilayah, error) {
+	var wilayah []Wilayah
+	query := `SELECT provinsi_id, kota_id FROM master_kota ORDER BY provinsi_id, kota_id`
+	err := s.db.SelectContext(ctx, &wilayah, query)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil data wilayah: %w", err)
+	}
+	return wilayah, nil
 }
 
 type dbStorer struct {

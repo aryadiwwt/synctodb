@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/aryadiwwt/synctodb/domain" // Ganti dengan domain Anda, misal: domain.OutputDetail
+	"github.com/aryadiwwt/synctodb/domain"
 )
 
 // Definisikan struct untuk menampung response dari API login
@@ -30,7 +30,7 @@ type dataRequestBody struct {
 }
 
 type Fetcher interface {
-	FetchOutputDetails(ctx context.Context) ([]domain.OutputDetail, error)
+	FetchOutputDetails(ctx context.Context, kdProv string, kdKab string) ([]domain.OutputDetail, error)
 }
 
 // httpFetcher sekarang memiliki state untuk token dan info login
@@ -42,12 +42,10 @@ type httpFetcher struct {
 	password  string
 	authToken string // Tempat menyimpan token setelah login berhasil
 	tahun     int
-	kdProv    string
-	kdKab     string
 }
 
 // NewHTTPFetcher sekarang menerima konfigurasi login
-func NewHTTPFetcher(client *http.Client, dataURL, loginURL, username, password string, tahun int, kdProv, kdKab string) Fetcher {
+func NewHTTPFetcher(client *http.Client, dataURL, loginURL, username, password string, tahun int) Fetcher {
 	return &httpFetcher{
 		client:   client,
 		dataURL:  dataURL,
@@ -55,13 +53,11 @@ func NewHTTPFetcher(client *http.Client, dataURL, loginURL, username, password s
 		username: username,
 		password: password,
 		tahun:    tahun,
-		kdProv:   kdProv,
-		kdKab:    kdKab,
 	}
 }
 
 // FetchOutputDetail adalah nama baru yang lebih deskriptif
-func (f *httpFetcher) FetchOutputDetails(ctx context.Context) ([]domain.OutputDetail, error) {
+func (f *httpFetcher) FetchOutputDetails(ctx context.Context, kdProv string, kdKab string) ([]domain.OutputDetail, error) {
 	// 1. Cek token. Jika kosong, lakukan autentikasi.
 	if f.authToken == "" {
 		if err := f.authenticate(ctx); err != nil {
@@ -72,8 +68,8 @@ func (f *httpFetcher) FetchOutputDetails(ctx context.Context) ([]domain.OutputDe
 	// 2. Buat request body (seperti pada metode POST)
 	dataPayload := dataRequestBody{
 		Tahun:  f.tahun,
-		KdProv: f.kdProv,
-		KdKab:  f.kdKab,
+		KdProv: kdProv,
+		KdKab:  kdKab,
 	}
 	body, err := json.Marshal(dataPayload)
 	if err != nil {
