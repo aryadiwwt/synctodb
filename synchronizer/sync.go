@@ -28,13 +28,22 @@ func NewOutputDetailSynchronizer(f fetcher.Fetcher, s storer.Storer, l *log.Logg
 }
 
 // Synchronize mengurutkan alur kerja, sekarang dengan langkah transformasi.
-func (s *OutputDetailSynchronizer) Synchronize(ctx context.Context) error {
+func (s *OutputDetailSynchronizer) Synchronize(ctx context.Context, kodeProvinsi []string) error {
 	s.log.Println("Starting output detail synchronization...")
 
-	daftarWilayah, err := s.storer.GetAllWilayah(ctx) // dbStorer adalah instance storer Anda
+	daftarWilayah, err := s.storer.GetWilayahByProvinsi(ctx, kodeProvinsi)
 	if err != nil {
 		s.log.Fatalf("Gagal mendapatkan daftar wilayah: %v", err)
 	}
+	// daftarWilayah, err := s.storer.GetWilayahByProvinsi(ctx, kodeProvinsi) // dbStorer adalah instance storer Anda
+	// if err != nil {
+	// 	s.log.Fatalf("Gagal mendapatkan daftar wilayah: %v", err)
+	// }
+	if len(daftarWilayah) == 0 {
+		s.log.Println("Tidak ada data wilayah yang ditemukan untuk diproses. Selesai.")
+		return nil
+	}
+
 	s.log.Printf("Akan memproses data untuk %d kabupaten/kota...", len(daftarWilayah))
 
 	// 2. Lakukan loop untuk setiap wilayah
@@ -68,7 +77,7 @@ func (s *OutputDetailSynchronizer) Synchronize(ctx context.Context) error {
 		s.log.Printf("=== Selesai memproses untuk Provinsi: %s, Kabupaten: %s. Total %d data disimpan. ===", wilayah.KodeProvinsi, wilayah.KodeKabupaten, len(details))
 
 		// Opsional: Beri jeda singkat antar request untuk tidak membebani API
-		time.Sleep(3 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 
 	s.log.Println("Semua proses sinkronisasi untuk seluruh wilayah telah selesai.")

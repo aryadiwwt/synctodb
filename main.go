@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aryadiwwt/synctodb/config"
@@ -23,13 +25,18 @@ func main() {
 	}
 	logger := log.New(os.Stdout, "DATA-SYNC-SERVICE: ", log.LstdFlags|log.Lshortfile)
 
-	// 1. Load Configuration
+	// Load Configuration
 	cfg := config.New()
 	// Pastikan username dan password tidak kosong
 	if cfg.APIUsername == "" || cfg.APIPassword == "" {
 		logger.Fatal("FATAL: API_USERNAME and API_PASSWORD environment variables must be set.")
 	}
-	// 2. Setup Dependencies
+
+	// 3. Definisikan flag untuk command line
+	// Akan membaca flag seperti: -prov="11,12,51"
+	provinsiPtr := flag.String("prov", "", "Daftar kode provinsi yang dipisahkan koma (contoh: 11,12,51)")
+	flag.Parse() // Baca semua flag yang didefinisikan
+	// Setup Dependencies
 	// Koneksi DB
 	db, err := sqlx.Connect("postgres", cfg.DatabaseURL)
 	if err != nil {
@@ -56,10 +63,31 @@ func main() {
 	// ---------------------------------------------
 	// HTTP Client - dikonfigurasi sekali dan di-inject
 	httpClient := &http.Client{
-		Timeout: 180 * time.Second,
+		Timeout: 300 * time.Second,
+	}
+	// Proses input dari flag
+	var daftarProvinsi []string
+	if *provinsiPtr != "" {
+		// Pisahkan string menjadi slice berdasarkan koma
+		daftarProvinsi = strings.Split(*provinsiPtr, ",")
+		logger.Printf("Akan memproses data untuk provinsi: %v", daftarProvinsi)
+	} else {
+		logger.Println("Tidak ada kode provinsi yang ditentukan. Untuk memproses semua, biarkan flag -prov kosong.")
 	}
 
-	// 3. Create Concrete Implementations
+	// // 5. Dapatkan daftar wilayah dari database (sudah difilter)
+	// // Jika daftarProvinsi kosong, fungsi akan mengembalikan semua wilayah.
+	// daftarWilayah, err := dbStorer.GetWilayahByProvinsi(ctx, daftarProvinsi)
+	// if err != nil {
+	// 	logger.Fatalf("Gagal mendapatkan daftar wilayah: %v", err)
+	// }
+
+	// if len(daftarWilayah) == 0 {
+	// 	logger.Println("Tidak ada data wilayah yang ditemukan untuk diproses. Selesai.")
+	// 	return
+	// }
+
+	// Create Concrete Implementations
 	// Berikan semua konfigurasi yang dibutuhkan oleh Fetcher
 	dataFetcher := fetcher.NewHTTPFetcher(
 		httpClient,
@@ -79,9 +107,13 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	if err := postSync.Synchronize(ctx); err != nil {
-		logger.Fatalf("FATAL: Post synchronization process failed: %v", err)
+	if err := postSync.Synchronize(ctx, daftarProvinsi); err != nil {
+		logger.Fatalf("Proses sinkronisasi gagal: %v", err)
 	}
+
+	// if err := postSync.Synchronize(ctx, daftarProvinsi); err != nil {
+	// 	logger.Fatalf("FATAL: Post synchronization process failed: %v", err)
+	// }
 
 	logger.Println("Application finished successfully.")
 }

@@ -16,21 +16,63 @@ type Wilayah struct {
 }
 
 // Storer mendefinisikan kontrak untuk menyimpan data post.
+
 type Storer interface {
 	StoreOutputDetails(ctx context.Context, details []domain.OutputDetail) error
-	GetAllWilayah(ctx context.Context) ([]Wilayah, error)
+	// Diubah: Menerima slice kode provinsi untuk difilter
+	GetWilayahByProvinsi(ctx context.Context, kodeProvinsi []string) ([]Wilayah, error)
 }
 
-// Fungsi untuk mengambil semua wilayah dari DB
-func (s *dbStorer) GetAllWilayah(ctx context.Context) ([]Wilayah, error) {
+// type Storer interface {
+// 	StoreOutputDetails(ctx context.Context, details []domain.OutputDetail) error
+// 	GetAllWilayah(ctx context.Context) ([]Wilayah, error)
+// }
+
+// Implementasi fungsi diubah untuk memfilter berdasarkan kd_prov
+func (s *dbStorer) GetWilayahByProvinsi(ctx context.Context, kodeProvinsi []string) ([]Wilayah, error) {
 	var wilayah []Wilayah
-	query := `SELECT provinsi_id, kota_id FROM master_kota ORDER BY provinsi_id, kota_id`
-	err := s.db.SelectContext(ctx, &wilayah, query)
-	if err != nil {
-		return nil, fmt.Errorf("gagal mengambil data wilayah: %w", err)
+
+	// Query dasar
+	baseQuery := `SELECT provinsi_id, kota_id FROM master_kota`
+
+	var args []interface{}
+
+	// Jika daftar provinsi diberikan, tambahkan klausa WHERE IN
+	if len(kodeProvinsi) > 0 {
+		baseQuery += ` WHERE provinsi_id IN (?)`
+		args = append(args, kodeProvinsi)
 	}
+
+	baseQuery += ` ORDER BY provinsi_id, kota_id`
+
+	// sqlx.In secara aman akan mengubah query (?) menjadi ($1, $2, ...)
+	// dan menyesuaikan argumennya. Ini cara aman untuk klausa IN.
+	query, args, err := sqlx.In(baseQuery, args...)
+	if err != nil {
+		return nil, fmt.Errorf("gagal membuat query IN: %w", err)
+	}
+
+	// Rebind query agar sesuai dengan placeholder PostgreSQL ($1, $2)
+	query = s.db.Rebind(query)
+
+	err = s.db.SelectContext(ctx, &wilayah, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil data wilayah yang difilter: %w", err)
+	}
+
 	return wilayah, nil
 }
+
+// // Fungsi untuk mengambil semua wilayah dari DB
+// func (s *dbStorer) GetAllWilayah(ctx context.Context) ([]Wilayah, error) {
+// 	var wilayah []Wilayah
+// 	query := `SELECT provinsi_id, kota_id FROM master_kota ORDER BY provinsi_id, kota_id`
+// 	err := s.db.SelectContext(ctx, &wilayah, query)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("gagal mengambil data wilayah: %w", err)
+// 	}
+// 	return wilayah, nil
+// }
 
 type dbStorer struct {
 	db *sqlx.DB
