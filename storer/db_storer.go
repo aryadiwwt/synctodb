@@ -3,6 +3,7 @@ package storer
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/aryadiwwt/synctodb/domain"
 	customErrors "github.com/aryadiwwt/synctodb/errors"
@@ -58,6 +59,23 @@ func (s *dbStorer) GetWilayahByProvinsi(ctx context.Context, kodeProvinsi []stri
 	err = s.db.SelectContext(ctx, &wilayah, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("gagal mengambil data wilayah yang difilter: %w", err)
+	}
+
+	// Lakukan loop untuk memformat kode kabupaten setelah data didapat
+	for i := range wilayah {
+		// Ambil kode kabupaten mentah
+		kodeKabStr := wilayah[i].KodeKabupaten
+
+		// Ubah string menjadi integer
+		num, err := strconv.Atoi(kodeKabStr)
+		if err != nil {
+			// Jika gagal (misal format tidak standar), biarkan apa adanya dan beri peringatan
+			fmt.Printf("Peringatan: Format kd_kab '%s' tidak valid, tidak diformat.\n", kodeKabStr)
+			continue
+		}
+
+		// Format integer menjadi string 2 digit dengan awalan nol
+		wilayah[i].KodeKabupaten = fmt.Sprintf("%02d", num)
 	}
 
 	return wilayah, nil
