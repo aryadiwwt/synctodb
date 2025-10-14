@@ -17,19 +17,13 @@ type Wilayah struct {
 }
 
 // Storer mendefinisikan kontrak untuk menyimpan data post.
-
 type Storer interface {
 	StoreOutputDetails(ctx context.Context, details []domain.OutputDetail) error
 	// Diubah: Menerima slice kode provinsi untuk difilter
 	GetWilayahByProvinsi(ctx context.Context, kodeProvinsi []string) ([]Wilayah, error)
 }
 
-// type Storer interface {
-// 	StoreOutputDetails(ctx context.Context, details []domain.OutputDetail) error
-// 	GetAllWilayah(ctx context.Context) ([]Wilayah, error)
-// }
-
-// Implementasi fungsi diubah untuk memfilter berdasarkan kd_prov
+// Implementasi fungsi untuk memfilter berdasarkan kd_prov
 func (s *dbStorer) GetWilayahByProvinsi(ctx context.Context, kodeProvinsi []string) ([]Wilayah, error) {
 	var wilayah []Wilayah
 
@@ -80,17 +74,6 @@ func (s *dbStorer) GetWilayahByProvinsi(ctx context.Context, kodeProvinsi []stri
 
 	return wilayah, nil
 }
-
-// // Fungsi untuk mengambil semua wilayah dari DB
-// func (s *dbStorer) GetAllWilayah(ctx context.Context) ([]Wilayah, error) {
-// 	var wilayah []Wilayah
-// 	query := `SELECT provinsi_id, kota_id FROM master_kota ORDER BY provinsi_id, kota_id`
-// 	err := s.db.SelectContext(ctx, &wilayah, query)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("gagal mengambil data wilayah: %w", err)
-// 	}
-// 	return wilayah, nil
-// }
 
 type dbStorer struct {
 	db *sqlx.DB

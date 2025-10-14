@@ -32,7 +32,7 @@ func main() {
 		logger.Fatal("FATAL: API_USERNAME and API_PASSWORD environment variables must be set.")
 	}
 
-	// 3. Definisikan flag untuk command line
+	// Definisikan flag untuk command line
 	// Akan membaca flag seperti: -prov="11,12,51"
 	provinsiPtr := flag.String("prov", "", "Daftar kode provinsi yang dipisahkan koma (contoh: 11,12,51)")
 	flag.Parse() // Baca semua flag yang didefinisikan
@@ -99,11 +99,11 @@ func main() {
 	)
 	dataStorer := storer.NewDBStorer(db)
 
-	// 4. Compose The Application
+	// Compose The Application
 	// Inject semua dependensi ke dalam synchronizer
 	postSync := synchronizer.NewOutputDetailSynchronizer(dataFetcher, dataStorer, logger)
 
-	// 5. Run The Application
+	// Run The Application
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 

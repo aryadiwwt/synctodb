@@ -35,10 +35,7 @@ func (s *OutputDetailSynchronizer) Synchronize(ctx context.Context, kodeProvinsi
 	if err != nil {
 		s.log.Fatalf("Gagal mendapatkan daftar wilayah: %v", err)
 	}
-	// daftarWilayah, err := s.storer.GetWilayahByProvinsi(ctx, kodeProvinsi) // dbStorer adalah instance storer Anda
-	// if err != nil {
-	// 	s.log.Fatalf("Gagal mendapatkan daftar wilayah: %v", err)
-	// }
+
 	if len(daftarWilayah) == 0 {
 		s.log.Println("Tidak ada data wilayah yang ditemukan untuk diproses. Selesai.")
 		return nil
@@ -63,12 +60,12 @@ func (s *OutputDetailSynchronizer) Synchronize(ctx context.Context, kodeProvinsi
 			continue
 		}
 
-		// 4. Transformasi data (jika ada)
+		// Transformasi data (jika ada)
 		s.log.Println("Transforming data...")
 		transformedDetails := transformDetails(details)
 		s.log.Println("Data transformation complete.")
 
-		// 5. Simpan data ke database (menggunakan batch processing)
+		// Simpan data ke database (menggunakan batch processing)
 		if err := s.storer.StoreOutputDetails(ctx, transformedDetails); err != nil {
 			s.log.Printf("ERROR saat menyimpan data untuk Prov %s Kab %s: %v", wilayah.KodeProvinsi, wilayah.KodeKabupaten, err)
 			continue
@@ -81,31 +78,6 @@ func (s *OutputDetailSynchronizer) Synchronize(ctx context.Context, kodeProvinsi
 	}
 
 	s.log.Println("Semua proses sinkronisasi untuk seluruh wilayah telah selesai.")
-
-	// // 1. FETCH: Ambil data mentah dari API
-	// details, err := s.fetcher.FetchOutputDetails(ctx)
-	// if err != nil {
-	// 	return fmt.Errorf("synchronization failed during fetch phase: %w", err)
-	// }
-	// s.log.Printf("Successfully fetched %d output details.", len(details))
-
-	// if len(details) == 0 {
-	// 	s.log.Println("No new data to synchronize.")
-	// 	return nil
-	// }
-
-	// // 2. TRANSFORM: Ubah data sesuai aturan bisnis
-	// s.log.Println("Transforming data...")
-	// transformedDetails := transformDetails(details)
-	// s.log.Println("Data transformation complete.")
-
-	// // 3. STORE: Simpan data yang sudah ditransformasi
-	// if err := s.storer.StoreOutputDetails(ctx, transformedDetails); err != nil {
-	// 	return fmt.Errorf("synchronization failed during store phase: %w", err)
-	// }
-	// s.log.Println("Successfully stored transformed data to the database.")
-
-	// s.log.Println("Synchronization finished successfully.")
 	return nil
 }
 
