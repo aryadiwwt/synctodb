@@ -75,18 +75,6 @@ func main() {
 		logger.Println("Tidak ada kode provinsi yang ditentukan. Untuk memproses semua, biarkan flag -prov kosong.")
 	}
 
-	// // 5. Dapatkan daftar wilayah dari database (sudah difilter)
-	// // Jika daftarProvinsi kosong, fungsi akan mengembalikan semua wilayah.
-	// daftarWilayah, err := dbStorer.GetWilayahByProvinsi(ctx, daftarProvinsi)
-	// if err != nil {
-	// 	logger.Fatalf("Gagal mendapatkan daftar wilayah: %v", err)
-	// }
-
-	// if len(daftarWilayah) == 0 {
-	// 	logger.Println("Tidak ada data wilayah yang ditemukan untuk diproses. Selesai.")
-	// 	return
-	// }
-
 	// Create Concrete Implementations
 	// Berikan semua konfigurasi yang dibutuhkan oleh Fetcher
 	dataFetcher := fetcher.NewHTTPFetcher(
@@ -110,10 +98,6 @@ func main() {
 	if err := postSync.Synchronize(ctx, daftarProvinsi); err != nil {
 		logger.Fatalf("Proses sinkronisasi gagal: %v", err)
 	}
-
-	// if err := postSync.Synchronize(ctx, daftarProvinsi); err != nil {
-	// 	logger.Fatalf("FATAL: Post synchronization process failed: %v", err)
-	// }
 
 	logger.Println("Application finished successfully.")
 }
