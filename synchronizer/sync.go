@@ -74,6 +74,7 @@ func (s *OutputDetailSynchronizer) Synchronize(ctx context.Context, kodeProvinsi
 		s.log.Printf("=== Selesai memproses untuk Provinsi: %s, Kabupaten: %s. Total %d data disimpan. ===", wilayah.KodeProvinsi, wilayah.KodeKabupaten, len(details))
 
 		// Opsional: Beri jeda singkat antar request untuk tidak membebani API
+		s.log.Println("Memberi jeda 30 Detik...")
 		time.Sleep(30 * time.Second)
 	}
 
