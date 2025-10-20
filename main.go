@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -35,6 +37,7 @@ func main() {
 	// Definisikan flag untuk command line
 	// Akan membaca flag seperti: -prov="11,12,51"
 	provinsiPtr := flag.String("prov", "", "Daftar kode provinsi yang dipisahkan koma (contoh: 11,12,51)")
+	kabupatenPtr := flag.String("kab", "", "Kode kabupaten untuk memulai proses (opsional)")
 	flag.Parse() // Baca semua flag yang didefinisikan
 	// Setup Dependencies
 	// Koneksi DB
@@ -74,7 +77,20 @@ func main() {
 	} else {
 		logger.Println("Tidak ada kode provinsi yang ditentukan. Untuk memproses semua, biarkan flag -prov kosong.")
 	}
-
+	// Ambil nilai dari flag kabupaten
+	startKabupaten := *kabupatenPtr
+	if startKabupaten != "" {
+		// Ambil nilai mentah dari flag
+		kodeKabStr := strings.TrimSpace(*kabupatenPtr)
+		// Lakukan formatting yang sama seperti yang kita lakukan pada data lain
+		num, err := strconv.Atoi(kodeKabStr)
+		if err != nil {
+			logger.Fatalf("Error: Kode kabupaten '%s' bukan angka yang valid.", kodeKabStr)
+		}
+		// Format menjadi string 2 digit
+		startKabupaten = fmt.Sprintf("%02d", num)
+		logger.Printf("Proses akan dimulai dari kabupaten dengan kode yang diformat: %s", startKabupaten)
+	}
 	// Create Concrete Implementations
 	// Berikan semua konfigurasi yang dibutuhkan oleh Fetcher
 	dataFetcher := fetcher.NewHTTPFetcher(
@@ -95,7 +111,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	if err := postSync.Synchronize(ctx, daftarProvinsi); err != nil {
+	if err := postSync.Synchronize(ctx, daftarProvinsi, startKabupaten); err != nil {
 		logger.Fatalf("Proses sinkronisasi gagal: %v", err)
 	}
 

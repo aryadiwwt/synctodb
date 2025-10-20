@@ -28,7 +28,7 @@ func NewOutputDetailSynchronizer(f fetcher.Fetcher, s storer.Storer, l *log.Logg
 }
 
 // Synchronize mengurutkan alur kerja, sekarang dengan langkah transformasi.
-func (s *OutputDetailSynchronizer) Synchronize(ctx context.Context, kodeProvinsi []string) error {
+func (s *OutputDetailSynchronizer) Synchronize(ctx context.Context, kodeProvinsi []string, startKabupaten string) error {
 	s.log.Println("Starting output detail synchronization...")
 
 	daftarWilayah, err := s.storer.GetWilayahByProvinsi(ctx, kodeProvinsi)
@@ -42,13 +42,27 @@ func (s *OutputDetailSynchronizer) Synchronize(ctx context.Context, kodeProvinsi
 	}
 
 	s.log.Printf("Akan memproses data untuk %d kabupaten/kota...", len(daftarWilayah))
+	// 'startProcessing' akan menjadi 'true' setelah kita menemukan kabupaten awal
+	// Jika tidak ada flag -kab, langsung set ke true.
+	startProcessing := (startKabupaten == "")
 
-	// 2. Lakukan loop untuk setiap wilayah
 	for _, wilayah := range daftarWilayah {
-		s.log.Printf("=== Memulai proses untuk Provinsi: %s, Kabupaten: %s ===", wilayah.KodeProvinsi, wilayah.KodeKabupaten)
-
-		// 3. Fetch data untuk wilayah saat ini
-		// Perhatikan bagaimana kita sekarang memberikan kode wilayah sebagai argumen
+		// Jika kita belum sampai ke titik awal, cek apakah ini titik awalnya
+		if !startProcessing {
+			// Jika kode kabupaten saat ini cocok dengan flag, mulai proses dari sini
+			if wilayah.KodeKabupaten == startKabupaten {
+				s.log.Printf("Titik awal ditemukan. Memulai proses dari Kabupaten: %s", startKabupaten)
+				startProcessing = true
+			} else {
+				// Jika tidak cocok, lewati kabupaten ini
+				s.log.Printf("Melewati Kabupaten: %s (sebelum titik awal)", wilayah.KodeKabupaten)
+				continue
+			}
+		}
+		// Proses sinkronisasi hanya berjalan jika startProcessing sudah true
+		s.log.Printf("=== Memproses Provinsi: %s, Kabupaten: %s ===", wilayah.KodeProvinsi, wilayah.KodeKabupaten)
+		// Fetch data untuk wilayah saat ini
+		// Perhatikan bagaimana memberikan kode wilayah sebagai argumen
 		details, err := s.fetcher.FetchOutputDetails(ctx, wilayah.KodeProvinsi, wilayah.KodeKabupaten)
 		if err != nil {
 			s.log.Printf("ERROR saat mengambil data untuk Prov %s Kab %s: %v. Melanjutkan ke wilayah berikutnya.", wilayah.KodeProvinsi, wilayah.KodeKabupaten, err)
